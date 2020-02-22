@@ -14,6 +14,8 @@ namespace MsCrmTools.MetadataBrowser.AppCode.AttributeMd
             this.amd = amd;
         }
 
+        public AttributeMetadata GetAttribute() => amd;
+
         public string AttributeOf
         {
             get { return amd.AttributeOf; }

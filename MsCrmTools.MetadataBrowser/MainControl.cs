@@ -29,6 +29,7 @@ namespace MsCrmTools.MetadataBrowser
         private bool initialLoading = true;
         private ListViewColumnsSettings lvcSettings;
         private Thread searchThread;
+        private string lastFilter;
 
         public MainControl()
         {
@@ -255,20 +256,44 @@ namespace MsCrmTools.MetadataBrowser
                 return;
             }
 
-            string filterText = filter?.ToString()?.ToLower();
             if (filter == null)
+            {
+                return;
+            }
+
+            string filterText = filter?.ToString()?.ToLower();
+
+            if (lastFilter == filterText)
             {
                 return;
             }
 
             var action = new MethodInvoker(delegate
             {
-                entityListView.Items.Clear();
-                entityListView.Items.AddRange(
-                    BuildEntityItems(currentAllMetadata
-                        .ToList()
-                        ).Where(item => MatchEntitiesByFilter(item, filterText))
-                        .ToArray());
+                if (string.IsNullOrEmpty(lastFilter) || filterText.StartsWith(lastFilter))
+                {
+                    // New filter must produce a subset of existing results, so just remove non-matching items
+                    for (var i = entityListView.Items.Count - 1; i >= 0; i--)
+                    {
+                        var item = entityListView.Items[i];
+
+                        if (!MatchEntitiesByFilter(item, filterText))
+                        {
+                            entityListView.Items.RemoveAt(i);
+                        }
+                    }
+                }
+                else
+                {
+                    entityListView.Items.Clear();
+                    entityListView.Items.AddRange(
+                        BuildEntityItems(currentAllMetadata
+                            .ToList()
+                            ).Where(item => MatchEntitiesByFilter(item, filterText))
+                            .ToArray());
+                }
+
+                lastFilter = filterText;
             });
 
             if (entityListView.InvokeRequired)

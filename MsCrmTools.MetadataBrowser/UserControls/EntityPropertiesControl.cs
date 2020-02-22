@@ -26,6 +26,7 @@ namespace MsCrmTools.MetadataBrowser.UserControls
         private ListViewColumnsSettings lvcSettings;
         private Thread searchThread;
         private ConnectionDetail connectionDetail;
+        private string lastFilter;
 
         public EntityPropertiesControl(EntityMetadata emd, ListViewColumnsSettings lvcSettings, ConnectionDetail connectionDetail)
         {
@@ -258,7 +259,7 @@ namespace MsCrmTools.MetadataBrowser.UserControls
 
         private void FilterAttributeList(object filter = null)
         {
-            string filterText = filter?.ToString();
+            string filterText = filter?.ToString()?.ToLower();
             if (filter == null)
             {
                 return;
@@ -266,7 +267,25 @@ namespace MsCrmTools.MetadataBrowser.UserControls
 
             var action = new MethodInvoker(delegate
             {
-                LoadAttributes(emd.Attributes, filterText.ToLower());
+                if (string.IsNullOrEmpty(lastFilter) || filterText.StartsWith(lastFilter))
+                {
+                    // New filter must produce a subset of existing results, so just remove non-matching items
+                    for (var i = attributeListView.Items.Count - 1; i >= 0; i--)
+                    {
+                        var item = attributeListView.Items[i];
+
+                        if (!MatchAttributesByFilter(((AttributeMetadataInfo) item.Tag).GetAttribute(), filterText))
+                        {
+                            attributeListView.Items.RemoveAt(i);
+                        }
+                    }
+                }
+                else
+                {
+                    LoadAttributes(emd.Attributes, filterText);
+                }
+
+                lastFilter = filterText;
             });
 
             if (attributeListView.InvokeRequired)
